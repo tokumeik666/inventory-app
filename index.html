@@ -976,6 +976,14 @@
 
       if (!confirm(`本当に ${qty} 個発送しますか？`)) return;
 
+      // 楽観的更新: すぐにUIを更新
+      const product = products.find(p => p.id === currentProductId);
+      const oldStock = product.stock;
+      product.stock = Math.max(0, product.stock - qty);
+      closeModal('actionModal');
+      renderProducts();
+      showToast(`📤 発送中...`);
+
       try {
         const response = await fetch(`${API_URL}?action=ship`, {
           method: 'POST',
@@ -988,15 +996,18 @@
         const result = await response.json();
         if (result.success) {
           showToast(`✅ 発送しました（残り: ${result.newStock}個）`);
-          closeModal('actionModal');
-          await loadData();
           await loadTodayHistory();
-          renderProducts();
           renderTimeline();
         } else {
+          // 失敗したら元に戻す
+          product.stock = oldStock;
+          renderProducts();
           showToast(`❌ ${result.error || '発送に失敗しました'}`);
         }
       } catch (error) {
+        // エラー時も元に戻す
+        product.stock = oldStock;
+        renderProducts();
         console.error('発送エラー:', error);
         showToast('❌ 発送に失敗しました');
       }
@@ -1004,6 +1015,14 @@
 
     async function executeRestock() {
       const qty = parseInt(document.getElementById('qtyInput').value) || 1;
+
+      // 楽観的更新
+      const product = products.find(p => p.id === currentProductId);
+      const oldStock = product.stock;
+      product.stock = product.stock + qty;
+      closeModal('actionModal');
+      renderProducts();
+      showToast(`📥 入荷中...`);
 
       try {
         const response = await fetch(`${API_URL}?action=restock`, {
@@ -1017,15 +1036,16 @@
         const result = await response.json();
         if (result.success) {
           showToast(`✅ 入荷しました（現在: ${result.newStock}個）`);
-          closeModal('actionModal');
-          await loadData();
           await loadTodayHistory();
-          renderProducts();
           renderTimeline();
         } else {
+          product.stock = oldStock;
+          renderProducts();
           showToast('❌ 入荷に失敗しました');
         }
       } catch (error) {
+        product.stock = oldStock;
+        renderProducts();
         console.error('入荷エラー:', error);
         showToast('❌ 入荷に失敗しました');
       }
@@ -1170,7 +1190,12 @@
       }, 2500);
     }
 
-    document.getElementById('searchInput').addEventListener('input', renderProducts);
+    // デバウンス処理で検索を高速化
+    let searchTimeout;
+    document.getElementById('searchInput').addEventListener('input', () => {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(renderProducts, 300);
+    });
 
     function startAutoSync() {
       setInterval(async () => {
@@ -1178,7 +1203,7 @@
         await loadTodayHistory();
         renderProducts();
         renderTimeline();
-      }, 10000);
+      }, 30000); // 30秒に変更
     }
 
     init();
