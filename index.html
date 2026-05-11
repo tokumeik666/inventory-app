@@ -678,11 +678,47 @@
     let currentLogId = null;
     let uploadedPhotoBase64 = null;
 
+    // LocalStorageヘルパー
+    function saveToCache(key, data) {
+      try {
+        localStorage.setItem(key, JSON.stringify(data));
+      } catch (e) {
+        console.error('キャッシュ保存エラー:', e);
+      }
+    }
+
+    function loadFromCache(key) {
+      try {
+        const data = localStorage.getItem(key);
+        return data ? JSON.parse(data) : null;
+      } catch (e) {
+        console.error('キャッシュ読み込みエラー:', e);
+        return null;
+      }
+    }
+
     async function init() {
-      await loadData();
-      await loadTodayHistory();
-      renderProducts();
-      renderTimeline();
+      // キャッシュから即座に読み込み
+      const cachedProducts = loadFromCache('products');
+      const cachedCategories = loadFromCache('categories');
+      const cachedHistory = loadFromCache('todayHistory');
+
+      if (cachedProducts) {
+        products = cachedProducts;
+        renderProducts();
+      }
+      if (cachedCategories) {
+        categories = cachedCategories;
+        populateCategorySelect();
+      }
+      if (cachedHistory) {
+        todayHistory = cachedHistory;
+        renderTimeline();
+      }
+
+      // バックグラウンドで最新データを取得
+      loadData();
+      loadTodayHistory();
       startAutoSync();
     }
 
@@ -692,10 +728,15 @@
         const data = await response.json();
         products = data.products || [];
         categories = data.categories || [];
+        saveToCache('products', products);
+        saveToCache('categories', categories);
         populateCategorySelect();
+        renderProducts();
       } catch (error) {
         console.error('データ取得エラー:', error);
-        showToast('データの取得に失敗しました');
+        if (products.length === 0) {
+          showToast('データの取得に失敗しました');
+        }
       }
     }
 
@@ -704,6 +745,8 @@
         const response = await fetch(`${API_URL}?action=getTodayHistory`);
         const data = await response.json();
         todayHistory = Array.isArray(data) ? data : [];
+        saveToCache('todayHistory', todayHistory);
+        renderTimeline();
       } catch (error) {
         console.error('履歴取得エラー:', error);
       }
@@ -921,6 +964,7 @@
       fixedProducts.forEach(p => {
         p.stock = Math.max(0, p.stock - qty);
       });
+      saveToCache('products', products); // キャッシュ更新
       closeModal('bulkShipModal');
       renderProducts();
       showToast(`✅ 一括発送しました`);
@@ -982,6 +1026,7 @@
       const product = products.find(p => p.id === currentProductId);
       const oldStock = product.stock;
       product.stock = Math.max(0, product.stock - qty);
+      saveToCache('products', products); // キャッシュ更新
       closeModal('actionModal');
       renderProducts();
       showToast(`✅ 発送しました`);
@@ -1018,6 +1063,7 @@
       const product = products.find(p => p.id === currentProductId);
       const oldStock = product.stock;
       product.stock = product.stock + qty;
+      saveToCache('products', products); // キャッシュ更新
       closeModal('actionModal');
       renderProducts();
       showToast(`✅ 入荷しました`);
@@ -1053,6 +1099,7 @@
       // 即座に削除
       const index = products.findIndex(p => p.id === id);
       const deletedProduct = products.splice(index, 1)[0];
+      saveToCache('products', products); // キャッシュ更新
       renderProducts();
       showToast(`✅ ${product.name} を削除`);
 
