@@ -1,0 +1,1187 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#000000">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="manifest.json">
+  <title>在庫管理</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg: #000000;
+      --card-bg: #1c1c1e;
+      --text: #ffffff;
+      --text-dim: #8e8e93;
+      --accent: #0a84ff;
+      --danger: #ff3b30;
+      --warning: #ff9500;
+      --success: #34c759;
+      --border: #38383a;
+    }
+
+    body {
+      font-family: -apple-system, "SF Pro Display", "Hiragino Sans", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 16px;
+      padding-bottom: 100px;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    h1 {
+      font-size: 32px;
+      font-weight: 800;
+    }
+
+    .bulk-ship-btn {
+      background: var(--accent);
+      border: none;
+      border-radius: 12px;
+      padding: 10px 16px;
+      font-size: 14px;
+      font-weight: 600;
+      color: white;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .bulk-ship-btn:active {
+      opacity: 0.8;
+    }
+
+    .search {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 16px;
+      font-size: 16px;
+      color: var(--text);
+      width: 100%;
+      margin-bottom: 16px;
+      font-family: inherit;
+    }
+
+    .search:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .timeline {
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 24px;
+      border: 1px solid var(--border);
+    }
+
+    .timeline-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .timeline-item {
+      display: flex;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .timeline-item:last-child {
+      border-bottom: none;
+    }
+
+    .timeline-time {
+      font-size: 12px;
+      color: var(--text-dim);
+      min-width: 50px;
+    }
+
+    .timeline-content {
+      flex: 1;
+    }
+
+    .timeline-product {
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+
+    .timeline-action {
+      font-size: 14px;
+      color: var(--text-dim);
+    }
+
+    .timeline-action.ship {
+      color: var(--danger);
+    }
+
+    .timeline-action.restock {
+      color: var(--success);
+    }
+
+    .timeline-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn-mini {
+      background: var(--border);
+      border: none;
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 12px;
+      color: var(--text);
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .btn-mini:active {
+      opacity: 0.7;
+    }
+
+    .product-card {
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 16px;
+      border: 1px solid var(--border);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .product-card.low-stock {
+      border-color: var(--warning);
+    }
+
+    .product-card.critical {
+      border-color: var(--danger);
+    }
+
+    .product-header {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .product-photo {
+      width: 80px;
+      height: 80px;
+      border-radius: 12px;
+      background: var(--border);
+      object-fit: cover;
+      flex-shrink: 0;
+    }
+
+    .product-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .product-name {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .product-category {
+      font-size: 13px;
+      color: var(--text-dim);
+      margin-bottom: 8px;
+    }
+
+    .product-stock-label {
+      font-size: 13px;
+      color: var(--text-dim);
+      margin-bottom: 4px;
+    }
+
+    .product-stock {
+      font-size: 32px;
+      font-weight: 800;
+      color: var(--accent);
+    }
+
+    .product-stock.low {
+      color: var(--warning);
+    }
+
+    .product-stock.critical {
+      color: var(--danger);
+    }
+
+    .progress-bar {
+      height: 8px;
+      background: var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: var(--accent);
+      transition: width 0.3s ease;
+    }
+
+    .progress-fill.low {
+      background: var(--warning);
+    }
+
+    .progress-fill.critical {
+      background: var(--danger);
+    }
+
+    .product-actions {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .btn {
+      background: var(--accent);
+      border: none;
+      border-radius: 12px;
+      padding: 14px;
+      font-size: 16px;
+      font-weight: 600;
+      color: white;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.2s;
+    }
+
+    .btn:active {
+      transform: scale(0.95);
+    }
+
+    .btn-secondary {
+      background: var(--border);
+    }
+
+    .btn-danger {
+      background: var(--danger);
+    }
+
+    .btn-success {
+      background: var(--success);
+    }
+
+    .fab {
+      position: fixed;
+      bottom: 80px;
+      right: 20px;
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: var(--accent);
+      border: none;
+      font-size: 28px;
+      color: white;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      z-index: 100;
+    }
+
+    .fab:active {
+      transform: scale(0.9);
+    }
+
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.9);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 20px;
+    }
+
+    .modal.active {
+      display: flex;
+    }
+
+    .modal-content {
+      background: var(--card-bg);
+      border-radius: 20px;
+      padding: 24px;
+      max-width: 400px;
+      width: 100%;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+
+    .modal-title {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 20px;
+    }
+
+    .input-group {
+      margin-bottom: 16px;
+    }
+
+    .input-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-dim);
+      margin-bottom: 6px;
+      display: block;
+    }
+
+    .input {
+      width: 100%;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-size: 16px;
+      color: var(--text);
+      font-family: inherit;
+    }
+
+    .input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    select.input {
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23ffffff' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 16px center;
+      padding-right: 40px;
+    }
+
+    .photo-upload {
+      position: relative;
+      width: 100%;
+      height: 150px;
+      background: var(--border);
+      border: 2px dashed var(--border);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      overflow: hidden;
+    }
+
+    .photo-upload img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .photo-upload-placeholder {
+      text-align: center;
+      color: var(--text-dim);
+      font-size: 14px;
+    }
+
+    .photo-upload input {
+      position: absolute;
+      opacity: 0;
+      width: 100%;
+      height: 100%;
+      cursor: pointer;
+    }
+
+    .quantity-control {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin: 20px 0;
+    }
+
+    .quantity-btn {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: var(--border);
+      border: none;
+      font-size: 24px;
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    .quantity-btn:active {
+      background: var(--border);
+      opacity: 0.7;
+    }
+
+    .quantity-display {
+      flex: 1;
+      text-align: center;
+      font-size: 48px;
+      font-weight: 800;
+    }
+
+    .btn-group {
+      display: grid;
+      gap: 8px;
+      margin-top: 16px;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 100px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--card-bg);
+      padding: 16px 24px;
+      border-radius: 24px;
+      font-size: 15px;
+      font-weight: 600;
+      z-index: 2000;
+      display: none;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    }
+
+    .toast.show {
+      display: block;
+      animation: toastIn 0.3s ease;
+    }
+
+    @keyframes toastIn {
+      from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+      }
+    }
+
+    .empty {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-dim);
+    }
+
+    .undo-btn {
+      position: fixed;
+      bottom: 150px;
+      right: 20px;
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: var(--border);
+      border: none;
+      font-size: 24px;
+      color: var(--text);
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      z-index: 100;
+    }
+
+    .undo-btn:active {
+      transform: scale(0.9);
+    }
+
+    .category-badge {
+      display: inline-block;
+      background: var(--border);
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+
+    .type-badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 600;
+      margin-left: 8px;
+    }
+
+    .type-badge.fixed {
+      background: rgba(10, 132, 255, 0.2);
+      color: var(--accent);
+    }
+
+    .type-badge.irregular {
+      background: rgba(255, 149, 0, 0.2);
+      color: var(--warning);
+    }
+
+    .fixed-products-list {
+      max-height: 200px;
+      overflow-y: auto;
+      margin: 16px 0;
+      padding: 12px;
+      background: var(--bg);
+      border-radius: 10px;
+    }
+
+    .fixed-product-item {
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      font-size: 14px;
+    }
+
+    .fixed-product-item:last-child {
+      border-bottom: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>📦 在庫</h1>
+    <button class="bulk-ship-btn" onclick="showBulkShipModal()">📦 一括発送</button>
+  </div>
+
+  <input type="text" class="search" id="searchInput" placeholder="🔍 商品を検索">
+
+  <div class="timeline" id="timeline">
+    <div class="timeline-title">
+      <span>今日の操作</span>
+      <span id="todayCount" style="color: var(--text-dim); font-size: 14px;">0件</span>
+    </div>
+    <div id="timelineContent"></div>
+  </div>
+
+  <div id="productsList"></div>
+
+  <button class="fab" onclick="showAddProductModal()">➕</button>
+  <button class="undo-btn" onclick="undoLast()">↩</button>
+
+  <!-- モーダル -->
+  <div class="modal" id="addProductModal">
+    <div class="modal-content">
+      <div class="modal-title">商品を追加</div>
+      <div class="input-group">
+        <label class="input-label">商品名</label>
+        <input type="text" class="input" id="newProductName" placeholder="例: パワーストーンA">
+      </div>
+      <div class="input-group">
+        <label class="input-label">カテゴリー</label>
+        <select class="input" id="newProductCategory"></select>
+      </div>
+      <div class="input-group">
+        <label class="input-label">商品タイプ</label>
+        <select class="input" id="newProductType">
+          <option value="irregular">不定期商品（個別発送）</option>
+          <option value="fixed">固定商品（一括発送対象）</option>
+        </select>
+      </div>
+      <div class="input-group">
+        <label class="input-label">初期在庫</label>
+        <input type="number" class="input" id="newProductStock" value="0" min="0">
+      </div>
+      <div class="input-group">
+        <label class="input-label">アラート基準</label>
+        <input type="number" class="input" id="newProductThreshold" value="10" min="0">
+      </div>
+      <div class="input-group">
+        <label class="input-label">商品写真</label>
+        <div class="photo-upload" id="photoUploadArea">
+          <div class="photo-upload-placeholder">
+            📷<br>タップして写真を選択
+          </div>
+          <input type="file" accept="image/*" id="photoInput" onchange="handlePhotoUpload(event)">
+        </div>
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-success" onclick="addProduct()">追加</button>
+        <button class="btn btn-secondary" onclick="closeModal('addProductModal')">キャンセル</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="bulkShipModal">
+    <div class="modal-content">
+      <div class="modal-title">📦 固定商品 一括発送</div>
+      <div class="quantity-control">
+        <button class="quantity-btn" onclick="changeBulkQty(-1)">−</button>
+        <div class="quantity-display" id="bulkQtyDisplay">1</div>
+        <button class="quantity-btn" onclick="changeBulkQty(1)">+</button>
+      </div>
+      <input type="number" class="input" id="bulkQtyInput" value="1" min="1" style="text-align: center; font-size: 20px; font-weight: 700;">
+      <div class="input-label" style="margin-top: 16px;">対象商品</div>
+      <div class="fixed-products-list" id="fixedProductsList"></div>
+      <div class="btn-group">
+        <button class="btn btn-danger" onclick="executeBulkShip()">一括発送を実行</button>
+        <button class="btn btn-secondary" onclick="closeModal('bulkShipModal')">キャンセル</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="actionModal">
+    <div class="modal-content">
+      <div class="modal-title" id="actionModalTitle">操作</div>
+      <div class="quantity-control">
+        <button class="quantity-btn" onclick="changeQty(-1)">−</button>
+        <div class="quantity-display" id="qtyDisplay">1</div>
+        <button class="quantity-btn" onclick="changeQty(1)">+</button>
+      </div>
+      <input type="number" class="input" id="qtyInput" value="1" min="1" style="text-align: center; font-size: 20px; font-weight: 700;">
+      <div class="btn-group">
+        <button class="btn btn-success" id="actionConfirmBtn">確定</button>
+        <button class="btn btn-secondary" onclick="closeModal('actionModal')">キャンセル</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="editLogModal">
+    <div class="modal-content">
+      <div class="modal-title">操作を編集</div>
+      <div class="quantity-control">
+        <button class="quantity-btn" onclick="changeEditQty(-1)">−</button>
+        <div class="quantity-display" id="editQtyDisplay">1</div>
+        <button class="quantity-btn" onclick="changeEditQty(1)">+</button>
+      </div>
+      <input type="number" class="input" id="editQtyInput" value="1" min="1" style="text-align: center; font-size: 20px; font-weight: 700;">
+      <div class="btn-group">
+        <button class="btn btn-success" onclick="saveEditLog()">保存</button>
+        <button class="btn btn-secondary" onclick="closeModal('editLogModal')">キャンセル</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const API_URL = 'https://script.google.com/macros/s/AKfycbwNTM7dzLCR0JOhgaT98nn_S6pZw8hr5wMY4ft-wGNnYXaKaWzplUaQlH-w2SgwRQ8Q/exec';
+
+    let products = [];
+    let categories = [];
+    let todayHistory = [];
+    let currentProductId = null;
+    let currentAction = null;
+    let currentLogId = null;
+    let uploadedPhotoBase64 = null;
+
+    async function init() {
+      await loadData();
+      await loadTodayHistory();
+      renderProducts();
+      renderTimeline();
+      startAutoSync();
+    }
+
+    async function loadData() {
+      try {
+        const response = await fetch(`${API_URL}?action=getAll`);
+        const data = await response.json();
+        products = data.products || [];
+        categories = data.categories || [];
+        populateCategorySelect();
+      } catch (error) {
+        console.error('データ取得エラー:', error);
+        showToast('データの取得に失敗しました');
+      }
+    }
+
+    async function loadTodayHistory() {
+      try {
+        const response = await fetch(`${API_URL}?action=getTodayHistory`);
+        const data = await response.json();
+        todayHistory = Array.isArray(data) ? data : [];
+      } catch (error) {
+        console.error('履歴取得エラー:', error);
+      }
+    }
+
+    function renderProducts() {
+      const container = document.getElementById('productsList');
+      const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+
+      let filtered = products;
+      if (searchTerm) {
+        filtered = products.filter(p =>
+          p.name.toLowerCase().includes(searchTerm) ||
+          p.cat.toLowerCase().includes(searchTerm)
+        );
+      }
+
+      if (filtered.length === 0) {
+        container.innerHTML = '<div class="empty">商品がありません</div>';
+        return;
+      }
+
+      container.innerHTML = filtered.map(product => {
+        const percentage = Math.min(100, (product.stock / product.capacity) * 100);
+        let stockClass = '';
+        let cardClass = '';
+
+        if (product.stock === 0) {
+          stockClass = 'critical';
+          cardClass = 'critical';
+        } else if (product.stock <= product.threshold) {
+          stockClass = 'low';
+          cardClass = 'low-stock';
+        }
+
+        const typeLabel = product.type === 'fixed' ? '固定' : '不定期';
+        const typeBadgeClass = product.type === 'fixed' ? 'fixed' : 'irregular';
+
+        return `
+          <div class="product-card ${cardClass}">
+            <div class="product-header">
+              ${product.photo ? `<img src="${product.photo}" class="product-photo" alt="">` : '<div class="product-photo"></div>'}
+              <div class="product-info">
+                <div class="product-name">${product.name}</div>
+                <div class="product-category">
+                  <span class="category-badge">${product.cat}</span>
+                  <span class="type-badge ${typeBadgeClass}">${typeLabel}</span>
+                </div>
+              </div>
+            </div>
+            <div class="product-stock-label">在庫</div>
+            <div class="product-stock ${stockClass}">${product.stock}</div>
+            <div class="progress-bar">
+              <div class="progress-fill ${stockClass}" style="width: ${percentage}%"></div>
+            </div>
+            <div class="product-actions">
+              <button class="btn btn-danger" onclick="showAction('${product.id}', 'ship')">📤 発送</button>
+              <button class="btn btn-success" onclick="showAction('${product.id}', 'restock')">📥 入荷</button>
+              <button class="btn btn-secondary" onclick="deleteProduct('${product.id}')">🗑️</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderTimeline() {
+      const container = document.getElementById('timelineContent');
+      const count = document.getElementById('todayCount');
+
+      count.textContent = `${todayHistory.length}件`;
+
+      if (todayHistory.length === 0) {
+        container.innerHTML = '<div style="text-align: center; color: var(--text-dim); padding: 20px;">まだ操作がありません</div>';
+        return;
+      }
+
+      container.innerHTML = todayHistory.map(log => {
+        const time = log.date.split(' ')[1] || '';
+        let actionText = '';
+        let actionClass = '';
+
+        if (log.type === 'ship') {
+          actionText = `発送 -${log.qty}個`;
+          actionClass = 'ship';
+        } else if (log.type === 'restock') {
+          actionText = `入荷 +${log.qty}個`;
+          actionClass = 'restock';
+        } else if (log.type === 'bulk') {
+          actionText = `一括発送 ${log.qty}件`;
+          actionClass = 'ship';
+        }
+
+        return `
+          <div class="timeline-item">
+            <div class="timeline-time">${time}</div>
+            <div class="timeline-content">
+              <div class="timeline-product">${log.itemName}</div>
+              <div class="timeline-action ${actionClass}">${actionText}</div>
+            </div>
+            <div class="timeline-actions">
+              ${log.type !== 'bulk' ? `<button class="btn-mini" onclick="showEditLog('${log.id}', ${log.qty})">編集</button>` : ''}
+              <button class="btn-mini" onclick="deleteLog('${log.id}')">削除</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function populateCategorySelect() {
+      const select = document.getElementById('newProductCategory');
+      select.innerHTML = categories.map(cat => `<option value="${cat}">${cat}</option>`).join('');
+    }
+
+    function renderFixedProducts() {
+      const container = document.getElementById('fixedProductsList');
+      const fixedProducts = products.filter(p => p.type === 'fixed');
+
+      if (fixedProducts.length === 0) {
+        container.innerHTML = '<div style="text-align: center; color: var(--text-dim); padding: 20px;">固定商品がありません</div>';
+        return;
+      }
+
+      container.innerHTML = fixedProducts.map(p => `
+        <div class="fixed-product-item">
+          <span>${p.name}</span>
+          <span style="color: var(--text-dim);">在庫: ${p.stock}</span>
+        </div>
+      `).join('');
+    }
+
+    function handlePhotoUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        uploadedPhotoBase64 = e.target.result;
+        document.getElementById('photoUploadArea').innerHTML = `
+          <img src="${uploadedPhotoBase64}" alt="">
+          <input type="file" accept="image/*" id="photoInput" onchange="handlePhotoUpload(event)">
+        `;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    async function addProduct() {
+      const name = document.getElementById('newProductName').value.trim();
+      const category = document.getElementById('newProductCategory').value;
+      const type = document.getElementById('newProductType').value;
+      const stock = parseInt(document.getElementById('newProductStock').value) || 0;
+      const threshold = parseInt(document.getElementById('newProductThreshold').value) || 10;
+
+      if (!name) {
+        showToast('商品名を入力してください');
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_URL}?action=addProduct`, {
+          method: 'POST',
+          body: JSON.stringify({
+            name,
+            cat: category,
+            type,
+            stock,
+            threshold,
+            capacity: stock,
+            photo: uploadedPhotoBase64 || ''
+          })
+        });
+
+        const result = await response.json();
+        if (result.success) {
+          showToast('✅ 商品を追加しました');
+          closeModal('addProductModal');
+          uploadedPhotoBase64 = null;
+          resetAddProductForm();
+          await loadData();
+          await loadTodayHistory();
+          renderProducts();
+          renderTimeline();
+        } else {
+          showToast('❌ 追加に失敗しました');
+        }
+      } catch (error) {
+        console.error('商品追加エラー:', error);
+        showToast('❌ 追加に失敗しました');
+      }
+    }
+
+    function resetAddProductForm() {
+      document.getElementById('newProductName').value = '';
+      document.getElementById('newProductStock').value = '0';
+      document.getElementById('newProductThreshold').value = '10';
+      document.getElementById('photoUploadArea').innerHTML = `
+        <div class="photo-upload-placeholder">
+          📷<br>タップして写真を選択
+        </div>
+        <input type="file" accept="image/*" id="photoInput" onchange="handlePhotoUpload(event)">
+      `;
+    }
+
+    function showBulkShipModal() {
+      renderFixedProducts();
+      document.getElementById('bulkQtyInput').value = 1;
+      document.getElementById('bulkQtyDisplay').textContent = 1;
+      document.getElementById('bulkShipModal').classList.add('active');
+    }
+
+    async function executeBulkShip() {
+      const qty = parseInt(document.getElementById('bulkQtyInput').value) || 1;
+
+      if (!confirm(`固定商品を ${qty} 件分一括発送しますか？`)) return;
+
+      try {
+        const response = await fetch(`${API_URL}?action=bulkShip`, {
+          method: 'POST',
+          body: JSON.stringify({ qty })
+        });
+
+        const result = await response.json();
+        if (result.success) {
+          if (result.warnings && result.warnings.length > 0) {
+            const warningNames = result.warnings.map(w => `${w.name}（在庫: ${w.currentStock}）`).join('\n');
+            alert(`⚠️ 以下の商品は在庫不足のためスキップされました:\n\n${warningNames}`);
+          }
+          showToast('✅ 一括発送しました');
+          closeModal('bulkShipModal');
+          await loadData();
+          await loadTodayHistory();
+          renderProducts();
+          renderTimeline();
+        } else {
+          showToast('❌ 一括発送に失敗しました');
+        }
+      } catch (error) {
+        console.error('一括発送エラー:', error);
+        showToast('❌ 一括発送に失敗しました');
+      }
+    }
+
+    function showAction(productId, action) {
+      currentProductId = productId;
+      currentAction = action;
+
+      const product = products.find(p => p.id === productId);
+      const modal = document.getElementById('actionModal');
+      const title = document.getElementById('actionModalTitle');
+      const btn = document.getElementById('actionConfirmBtn');
+
+      if (action === 'ship') {
+        title.textContent = `📤 ${product.name} を発送`;
+        btn.textContent = '発送する';
+        btn.className = 'btn btn-danger';
+        btn.onclick = executeShip;
+      } else {
+        title.textContent = `📥 ${product.name} を入荷`;
+        btn.textContent = '入荷する';
+        btn.className = 'btn btn-success';
+        btn.onclick = executeRestock;
+      }
+
+      document.getElementById('qtyInput').value = 1;
+      document.getElementById('qtyDisplay').textContent = 1;
+      modal.classList.add('active');
+    }
+
+    async function executeShip() {
+      const qty = parseInt(document.getElementById('qtyInput').value) || 1;
+
+      if (!confirm(`本当に ${qty} 個発送しますか？`)) return;
+
+      try {
+        const response = await fetch(`${API_URL}?action=ship`, {
+          method: 'POST',
+          body: JSON.stringify({
+            id: currentProductId,
+            qty
+          })
+        });
+
+        const result = await response.json();
+        if (result.success) {
+          showToast(`✅ 発送しました（残り: ${result.newStock}個）`);
+          closeModal('actionModal');
+          await loadData();
+          await loadTodayHistory();
+          renderProducts();
+          renderTimeline();
+        } else {
+          showToast(`❌ ${result.error || '発送に失敗しました'}`);
+        }
+      } catch (error) {
+        console.error('発送エラー:', error);
+        showToast('❌ 発送に失敗しました');
+      }
+    }
+
+    async function executeRestock() {
+      const qty = parseInt(document.getElementById('qtyInput').value) || 1;
+
+      try {
+        const response = await fetch(`${API_URL}?action=restock`, {
+          method: 'POST',
+          body: JSON.stringify({
+            id: currentProductId,
+            qty
+          })
+        });
+
+        const result = await response.json();
+        if (result.success) {
+          showToast(`✅ 入荷しました（現在: ${result.newStock}個）`);
+          closeModal('actionModal');
+          await loadData();
+          await loadTodayHistory();
+          renderProducts();
+          renderTimeline();
+        } else {
+          showToast('❌ 入荷に失敗しました');
+        }
+      } catch (error) {
+        console.error('入荷エラー:', error);
+        showToast('❌ 入荷に失敗しました');
+      }
+    }
+
+    async function deleteProduct(id) {
+      const product = products.find(p => p.id === id);
+      if (!confirm(`本当に「${product.name}」を削除しますか？`)) return;
+
+      try {
+        const response = await fetch(`${API_URL}?action=deleteProduct&id=${id}`);
+        const result = await response.json();
+
+        if (result.success) {
+          showToast('✅ 商品を削除しました');
+          await loadData();
+          renderProducts();
+        } else {
+          showToast('❌ 削除に失敗しました');
+        }
+      } catch (error) {
+        console.error('削除エラー:', error);
+        showToast('❌ 削除に失敗しました');
+      }
+    }
+
+    function showEditLog(logId, currentQty) {
+      currentLogId = logId;
+      document.getElementById('editQtyInput').value = currentQty;
+      document.getElementById('editQtyDisplay').textContent = currentQty;
+      document.getElementById('editLogModal').classList.add('active');
+    }
+
+    async function saveEditLog() {
+      const qty = parseInt(document.getElementById('editQtyInput').value) || 1;
+
+      try {
+        const response = await fetch(`${API_URL}?action=editLog`, {
+          method: 'POST',
+          body: JSON.stringify({
+            id: currentLogId,
+            qty
+          })
+        });
+
+        const result = await response.json();
+        if (result.success) {
+          showToast('✅ 編集しました');
+          closeModal('editLogModal');
+          await loadData();
+          await loadTodayHistory();
+          renderProducts();
+          renderTimeline();
+        } else {
+          showToast(`❌ ${result.error || '編集に失敗しました'}`);
+        }
+      } catch (error) {
+        console.error('編集エラー:', error);
+        showToast('❌ 編集に失敗しました');
+      }
+    }
+
+    async function deleteLog(logId) {
+      if (!confirm('この操作を取り消しますか？在庫が元に戻ります。')) return;
+
+      try {
+        const response = await fetch(`${API_URL}?action=deleteLog&id=${logId}`);
+        const result = await response.json();
+
+        if (result.success) {
+          showToast('✅ 操作を取り消しました');
+          await loadData();
+          await loadTodayHistory();
+          renderProducts();
+          renderTimeline();
+        } else {
+          showToast(`❌ ${result.error || '取り消しに失敗しました'}`);
+        }
+      } catch (error) {
+        console.error('削除エラー:', error);
+        showToast('❌ 取り消しに失敗しました');
+      }
+    }
+
+    async function undoLast() {
+      if (!confirm('直前の操作を取り消しますか？')) return;
+
+      try {
+        const response = await fetch(`${API_URL}?action=undoLast`);
+        const result = await response.json();
+
+        if (result.success) {
+          showToast('↩ 操作を取り消しました');
+          await loadData();
+          await loadTodayHistory();
+          renderProducts();
+          renderTimeline();
+        } else {
+          showToast(`❌ ${result.error || '取り消しに失敗しました'}`);
+        }
+      } catch (error) {
+        console.error('取り消しエラー:', error);
+        showToast('❌ 取り消しに失敗しました');
+      }
+    }
+
+    function changeQty(delta) {
+      const input = document.getElementById('qtyInput');
+      const newValue = Math.max(1, parseInt(input.value) + delta);
+      input.value = newValue;
+      document.getElementById('qtyDisplay').textContent = newValue;
+    }
+
+    function changeBulkQty(delta) {
+      const input = document.getElementById('bulkQtyInput');
+      const newValue = Math.max(1, parseInt(input.value) + delta);
+      input.value = newValue;
+      document.getElementById('bulkQtyDisplay').textContent = newValue;
+    }
+
+    function changeEditQty(delta) {
+      const input = document.getElementById('editQtyInput');
+      const newValue = Math.max(1, parseInt(input.value) + delta);
+      input.value = newValue;
+      document.getElementById('editQtyDisplay').textContent = newValue;
+    }
+
+    function showAddProductModal() {
+      document.getElementById('addProductModal').classList.add('active');
+    }
+
+    function closeModal(modalId) {
+      document.getElementById(modalId).classList.remove('active');
+    }
+
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.classList.add('show');
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 2500);
+    }
+
+    document.getElementById('searchInput').addEventListener('input', renderProducts);
+
+    function startAutoSync() {
+      setInterval(async () => {
+        await loadData();
+        await loadTodayHistory();
+        renderProducts();
+        renderTimeline();
+      }, 10000);
+    }
+
+    init();
+  </script>
+</body>
+</html>
