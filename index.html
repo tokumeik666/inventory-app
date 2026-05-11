@@ -916,33 +916,37 @@
     async function executeBulkShip() {
       const qty = parseInt(document.getElementById('bulkQtyInput').value) || 1;
 
-      if (!confirm(`固定商品を ${qty} 件分一括発送しますか？`)) return;
+      // 即座に実行
+      const fixedProducts = products.filter(p => p.type === 'fixed');
+      fixedProducts.forEach(p => {
+        p.stock = Math.max(0, p.stock - qty);
+      });
+      closeModal('bulkShipModal');
+      renderProducts();
+      showToast(`✅ 一括発送しました`);
 
-      try {
-        const response = await fetch(`${API_URL}?action=bulkShip`, {
-          method: 'POST',
-          body: JSON.stringify({ qty })
-        });
-
-        const result = await response.json();
+      // バックグラウンドで同期
+      fetch(`${API_URL}?action=bulkShip`, {
+        method: 'POST',
+        body: JSON.stringify({ qty })
+      })
+      .then(res => res.json())
+      .then(result => {
         if (result.success) {
+          loadData().then(renderProducts);
+          loadTodayHistory().then(renderTimeline);
           if (result.warnings && result.warnings.length > 0) {
-            const warningNames = result.warnings.map(w => `${w.name}（在庫: ${w.currentStock}）`).join('\n');
-            alert(`⚠️ 以下の商品は在庫不足のためスキップされました:\n\n${warningNames}`);
+            showToast('⚠️ 一部在庫不足');
           }
-          showToast('✅ 一括発送しました');
-          closeModal('bulkShipModal');
-          await loadData();
-          await loadTodayHistory();
-          renderProducts();
-          renderTimeline();
         } else {
-          showToast('❌ 一括発送に失敗しました');
+          loadData().then(renderProducts);
+          showToast('❌ 一括発送に失敗');
         }
-      } catch (error) {
-        console.error('一括発送エラー:', error);
-        showToast('❌ 一括発送に失敗しました');
-      }
+      })
+      .catch(() => {
+        loadData().then(renderProducts);
+        showToast('❌ 一括発送に失敗');
+      });
     }
 
     function showAction(productId, action) {
@@ -974,102 +978,99 @@
     async function executeShip() {
       const qty = parseInt(document.getElementById('qtyInput').value) || 1;
 
-      if (!confirm(`本当に ${qty} 個発送しますか？`)) return;
-
-      // 楽観的更新: すぐにUIを更新
+      // 確認ダイアログ削除：即座に実行
       const product = products.find(p => p.id === currentProductId);
       const oldStock = product.stock;
       product.stock = Math.max(0, product.stock - qty);
       closeModal('actionModal');
       renderProducts();
-      showToast(`📤 発送中...`);
+      showToast(`✅ 発送しました`);
 
-      try {
-        const response = await fetch(`${API_URL}?action=ship`, {
-          method: 'POST',
-          body: JSON.stringify({
-            id: currentProductId,
-            qty
-          })
-        });
-
-        const result = await response.json();
+      // バックグラウンドで同期
+      fetch(`${API_URL}?action=ship`, {
+        method: 'POST',
+        body: JSON.stringify({
+          id: currentProductId,
+          qty
+        })
+      })
+      .then(res => res.json())
+      .then(result => {
         if (result.success) {
-          showToast(`✅ 発送しました（残り: ${result.newStock}個）`);
-          await loadTodayHistory();
-          renderTimeline();
+          loadTodayHistory().then(renderTimeline);
         } else {
-          // 失敗したら元に戻す
           product.stock = oldStock;
           renderProducts();
-          showToast(`❌ ${result.error || '発送に失敗しました'}`);
+          showToast(`❌ ${result.error}`);
         }
-      } catch (error) {
-        // エラー時も元に戻す
+      })
+      .catch(error => {
         product.stock = oldStock;
         renderProducts();
-        console.error('発送エラー:', error);
-        showToast('❌ 発送に失敗しました');
-      }
+        showToast('❌ 発送に失敗');
+      });
     }
 
     async function executeRestock() {
       const qty = parseInt(document.getElementById('qtyInput').value) || 1;
 
-      // 楽観的更新
+      // 即座に実行
       const product = products.find(p => p.id === currentProductId);
       const oldStock = product.stock;
       product.stock = product.stock + qty;
       closeModal('actionModal');
       renderProducts();
-      showToast(`📥 入荷中...`);
+      showToast(`✅ 入荷しました`);
 
-      try {
-        const response = await fetch(`${API_URL}?action=restock`, {
-          method: 'POST',
-          body: JSON.stringify({
-            id: currentProductId,
-            qty
-          })
-        });
-
-        const result = await response.json();
+      // バックグラウンドで同期
+      fetch(`${API_URL}?action=restock`, {
+        method: 'POST',
+        body: JSON.stringify({
+          id: currentProductId,
+          qty
+        })
+      })
+      .then(res => res.json())
+      .then(result => {
         if (result.success) {
-          showToast(`✅ 入荷しました（現在: ${result.newStock}個）`);
-          await loadTodayHistory();
-          renderTimeline();
+          loadTodayHistory().then(renderTimeline);
         } else {
           product.stock = oldStock;
           renderProducts();
-          showToast('❌ 入荷に失敗しました');
+          showToast('❌ 入荷に失敗');
         }
-      } catch (error) {
+      })
+      .catch(() => {
         product.stock = oldStock;
         renderProducts();
-        console.error('入荷エラー:', error);
-        showToast('❌ 入荷に失敗しました');
-      }
+        showToast('❌ 入荷に失敗');
+      });
     }
 
     async function deleteProduct(id) {
       const product = products.find(p => p.id === id);
-      if (!confirm(`本当に「${product.name}」を削除しますか？`)) return;
 
-      try {
-        const response = await fetch(`${API_URL}?action=deleteProduct&id=${id}`);
-        const result = await response.json();
+      // 即座に削除
+      const index = products.findIndex(p => p.id === id);
+      const deletedProduct = products.splice(index, 1)[0];
+      renderProducts();
+      showToast(`✅ ${product.name} を削除`);
 
-        if (result.success) {
-          showToast('✅ 商品を削除しました');
-          await loadData();
+      // バックグラウンドで同期
+      fetch(`${API_URL}?action=deleteProduct&id=${id}`)
+      .then(res => res.json())
+      .then(result => {
+        if (!result.success) {
+          products.splice(index, 0, deletedProduct);
           renderProducts();
-        } else {
-          showToast('❌ 削除に失敗しました');
+          showToast('❌ 削除に失敗');
         }
-      } catch (error) {
-        console.error('削除エラー:', error);
-        showToast('❌ 削除に失敗しました');
-      }
+      })
+      .catch(() => {
+        products.splice(index, 0, deletedProduct);
+        renderProducts();
+        showToast('❌ 削除に失敗');
+      });
     }
 
     function showEditLog(logId, currentQty) {
@@ -1109,47 +1110,41 @@
     }
 
     async function deleteLog(logId) {
-      if (!confirm('この操作を取り消しますか？在庫が元に戻ります。')) return;
+      // 即座に実行
+      showToast('✅ 取り消しました');
 
-      try {
-        const response = await fetch(`${API_URL}?action=deleteLog&id=${logId}`);
-        const result = await response.json();
-
-        if (result.success) {
-          showToast('✅ 操作を取り消しました');
-          await loadData();
-          await loadTodayHistory();
-          renderProducts();
-          renderTimeline();
-        } else {
-          showToast(`❌ ${result.error || '取り消しに失敗しました'}`);
+      // バックグラウンドで同期
+      fetch(`${API_URL}?action=deleteLog&id=${logId}`)
+      .then(res => res.json())
+      .then(result => {
+        loadData().then(renderProducts);
+        loadTodayHistory().then(renderTimeline);
+        if (!result.success) {
+          showToast(`❌ ${result.error || '取り消しに失敗'}`);
         }
-      } catch (error) {
-        console.error('削除エラー:', error);
-        showToast('❌ 取り消しに失敗しました');
-      }
+      })
+      .catch(() => {
+        showToast('❌ 取り消しに失敗');
+      });
     }
 
     async function undoLast() {
-      if (!confirm('直前の操作を取り消しますか？')) return;
+      // 即座に実行
+      showToast('↩ 取り消しました');
 
-      try {
-        const response = await fetch(`${API_URL}?action=undoLast`);
-        const result = await response.json();
-
-        if (result.success) {
-          showToast('↩ 操作を取り消しました');
-          await loadData();
-          await loadTodayHistory();
-          renderProducts();
-          renderTimeline();
-        } else {
-          showToast(`❌ ${result.error || '取り消しに失敗しました'}`);
+      // バックグラウンドで同期
+      fetch(`${API_URL}?action=undoLast`)
+      .then(res => res.json())
+      .then(result => {
+        loadData().then(renderProducts);
+        loadTodayHistory().then(renderTimeline);
+        if (!result.success) {
+          showToast(`❌ ${result.error || '取り消しに失敗'}`);
         }
-      } catch (error) {
-        console.error('取り消しエラー:', error);
-        showToast('❌ 取り消しに失敗しました');
-      }
+      })
+      .catch(() => {
+        showToast('❌ 取り消しに失敗');
+      });
     }
 
     function changeQty(delta) {
