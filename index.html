@@ -695,9 +695,12 @@
     let uploadedPhotoBase64 = null;
 
     // LocalStorageヘルパー
+    const APP_VERSION = '2.0'; // バージョンが変わったらキャッシュクリア
+
     function saveToCache(key, data) {
       try {
         localStorage.setItem(key, JSON.stringify(data));
+        localStorage.setItem('app_version', APP_VERSION);
       } catch (e) {
         console.error('キャッシュ保存エラー:', e);
       }
@@ -705,6 +708,14 @@
 
     function loadFromCache(key) {
       try {
+        // バージョンチェック
+        const cachedVersion = localStorage.getItem('app_version');
+        if (cachedVersion !== APP_VERSION) {
+          console.log('🔄 バージョン更新: キャッシュクリア');
+          localStorage.clear();
+          return null;
+        }
+
         const data = localStorage.getItem(key);
         return data ? JSON.parse(data) : null;
       } catch (e) {
@@ -714,7 +725,7 @@
     }
 
     async function init() {
-      // キャッシュから即座に読み込み
+      // キャッシュから即座に読み込み（表示のみ）
       const cachedProducts = loadFromCache('products');
       const cachedCategories = loadFromCache('categories');
       const cachedHistory = loadFromCache('todayHistory');
@@ -732,9 +743,9 @@
         renderTimeline();
       }
 
-      // バックグラウンドで最新データを取得
-      loadData();
-      loadTodayHistory();
+      // すぐに最新データを取得（キャッシュを上書き）
+      await loadData();
+      await loadTodayHistory();
       startAutoSync();
     }
 
@@ -743,15 +754,24 @@
         const response = await fetch(`${API_URL}?action=getAll`);
         const data = await response.json();
 
+        console.log('📥 サーバーから取得:', data.products?.length, '件');
+
         // 重複削除: IDでユニーク化
         const uniqueProducts = [];
         const seenIds = new Set();
         (data.products || []).forEach(p => {
+          // 数値型に変換
+          p.stock = Number(p.stock) || 0;
+          p.threshold = Number(p.threshold) || 0;
+          p.capacity = Number(p.capacity) || 0;
+
           if (!seenIds.has(p.id)) {
             seenIds.add(p.id);
             uniqueProducts.push(p);
           }
         });
+
+        console.log('✅ ユニーク化後:', uniqueProducts.length, '件');
 
         products = uniqueProducts;
         categories = data.categories || [];
@@ -760,7 +780,7 @@
         populateCategorySelect();
         renderProducts();
       } catch (error) {
-        console.error('データ取得エラー:', error);
+        console.error('❌ データ取得エラー:', error);
         if (products.length === 0) {
           showToast('データの取得に失敗しました');
         }
