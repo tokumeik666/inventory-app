@@ -726,7 +726,18 @@
       try {
         const response = await fetch(`${API_URL}?action=getAll`);
         const data = await response.json();
-        products = data.products || [];
+
+        // 重複削除: IDでユニーク化
+        const uniqueProducts = [];
+        const seenIds = new Set();
+        (data.products || []).forEach(p => {
+          if (!seenIds.has(p.id)) {
+            seenIds.add(p.id);
+            uniqueProducts.push(p);
+          }
+        });
+
+        products = uniqueProducts;
         categories = data.categories || [];
         saveToCache('products', products);
         saveToCache('categories', categories);
