@@ -695,7 +695,7 @@
     let uploadedPhotoBase64 = null;
 
     // LocalStorageヘルパー
-    const APP_VERSION = '2.0'; // バージョンが変わったらキャッシュクリア
+    const APP_VERSION = '2.1'; // バージョンが変わったらキャッシュクリア
 
     function saveToCache(key, data) {
       try {
@@ -1025,18 +1025,19 @@
       .then(res => res.json())
       .then(result => {
         if (result.success) {
-          loadData().then(renderProducts);
+          // サーバーから最新データを取得
+          loadData();
           loadTodayHistory().then(renderTimeline);
           if (result.warnings && result.warnings.length > 0) {
             showToast('⚠️ 一部在庫不足');
           }
         } else {
-          loadData().then(renderProducts);
+          loadData();
           showToast('❌ 一括発送に失敗');
         }
       })
       .catch(() => {
-        loadData().then(renderProducts);
+        loadData();
         showToast('❌ 一括発送に失敗');
       });
     }
@@ -1091,15 +1092,21 @@
       .then(res => res.json())
       .then(result => {
         if (result.success) {
+          // サーバーの値を使う
+          product.stock = result.newStock;
+          saveToCache('products', products);
+          renderProducts();
           loadTodayHistory().then(renderTimeline);
         } else {
           product.stock = oldStock;
+          saveToCache('products', products);
           renderProducts();
           showToast(`❌ ${result.error}`);
         }
       })
       .catch(error => {
         product.stock = oldStock;
+        saveToCache('products', products);
         renderProducts();
         showToast('❌ 発送に失敗');
       });
@@ -1129,15 +1136,21 @@
       .then(res => res.json())
       .then(result => {
         if (result.success) {
+          // サーバーの値を使う
+          product.stock = result.newStock;
+          saveToCache('products', products);
+          renderProducts();
           loadTodayHistory().then(renderTimeline);
         } else {
           product.stock = oldStock;
+          saveToCache('products', products);
           renderProducts();
           showToast('❌ 入荷に失敗');
         }
       })
       .catch(() => {
         product.stock = oldStock;
+        saveToCache('products', products);
         renderProducts();
         showToast('❌ 入荷に失敗');
       });
