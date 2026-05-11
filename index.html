@@ -449,29 +449,45 @@
       bottom: 100px;
       left: 50%;
       transform: translateX(-50%);
-      background: var(--card-bg);
-      padding: 16px 24px;
-      border-radius: 24px;
-      font-size: 15px;
-      font-weight: 600;
+      background: var(--success);
+      color: white;
+      padding: 20px 32px;
+      border-radius: 16px;
+      font-size: 18px;
+      font-weight: 700;
       z-index: 2000;
       display: none;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+      max-width: 80%;
+      text-align: center;
     }
 
     .toast.show {
       display: block;
-      animation: toastIn 0.3s ease;
+      animation: toastIn 0.4s ease;
     }
 
     @keyframes toastIn {
       from {
         opacity: 0;
-        transform: translateX(-50%) translateY(20px);
+        transform: translateX(-50%) translateY(30px) scale(0.8);
       }
       to {
         opacity: 1;
-        transform: translateX(-50%) translateY(0);
+        transform: translateX(-50%) translateY(0) scale(1);
+      }
+    }
+
+    .product-card.just-updated {
+      animation: highlight 2s ease;
+    }
+
+    @keyframes highlight {
+      0%, 100% {
+        background: var(--card-bg);
+      }
+      50% {
+        background: rgba(52, 199, 89, 0.2);
       }
     }
 
@@ -931,7 +947,7 @@
 
         const result = await response.json();
         if (result.success) {
-          showToast('✅ 商品を追加しました');
+          showToast(`➕ ${name}\n追加しました\n初期在庫 ${stock}個`);
           closeModal('addProductModal');
           uploadedPhotoBase64 = null;
           resetAddProductForm();
@@ -940,7 +956,7 @@
           renderProducts();
           renderTimeline();
         } else {
-          showToast('❌ 追加に失敗しました');
+          showToast(result.error || '❌ 追加に失敗しました');
         }
       } catch (error) {
         console.error('商品追加エラー:', error);
@@ -972,13 +988,14 @@
 
       // 即座に実行
       const fixedProducts = products.filter(p => p.type === 'fixed');
+      const productNames = fixedProducts.map(p => p.name).join('、');
       fixedProducts.forEach(p => {
         p.stock = Math.max(0, p.stock - qty);
       });
       saveToCache('products', products); // キャッシュ更新
       closeModal('bulkShipModal');
       renderProducts();
-      showToast(`✅ 一括発送しました`);
+      showToast(`📦 固定商品 一括発送\n${qty}件分 発送しました\n${fixedProducts.length}商品`);
 
       // バックグラウンドで同期
       fetch(`${API_URL}?action=bulkShip`, {
@@ -1040,7 +1057,8 @@
       saveToCache('products', products); // キャッシュ更新
       closeModal('actionModal');
       renderProducts();
-      showToast(`✅ 発送しました`);
+      highlightProduct(currentProductId);
+      showToast(`📤 ${product.name}\n${qty}個 発送しました\n残り ${product.stock}個`);
 
       // バックグラウンドで同期
       fetch(`${API_URL}?action=ship`, {
@@ -1077,7 +1095,8 @@
       saveToCache('products', products); // キャッシュ更新
       closeModal('actionModal');
       renderProducts();
-      showToast(`✅ 入荷しました`);
+      highlightProduct(currentProductId);
+      showToast(`📥 ${product.name}\n${qty}個 入荷しました\n現在 ${product.stock}個`);
 
       // バックグラウンドで同期
       fetch(`${API_URL}?action=restock`, {
@@ -1112,7 +1131,7 @@
       const deletedProduct = products.splice(index, 1)[0];
       saveToCache('products', products); // キャッシュ更新
       renderProducts();
-      showToast(`✅ ${product.name} を削除`);
+      showToast(`🗑️ ${product.name}\n削除しました`);
 
       // バックグラウンドで同期
       fetch(`${API_URL}?action=deleteProduct&id=${id}`)
@@ -1240,7 +1259,21 @@
       toast.classList.add('show');
       setTimeout(() => {
         toast.classList.remove('show');
-      }, 2500);
+      }, 3500);
+    }
+
+    function highlightProduct(productId) {
+      setTimeout(() => {
+        const cards = document.querySelectorAll('.product-card');
+        cards.forEach(card => {
+          if (card.textContent.includes(products.find(p => p.id === productId)?.name)) {
+            card.classList.add('just-updated');
+            setTimeout(() => {
+              card.classList.remove('just-updated');
+            }, 2000);
+          }
+        });
+      }, 100);
     }
 
     // デバウンス処理で検索を高速化
