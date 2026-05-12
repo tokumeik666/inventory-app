@@ -1132,7 +1132,19 @@
       const shortages = [];
 
       fixedProducts.forEach(product => {
-        const requiredStock = qty + buffer;
+        let requiredStock;
+        let isCushioning = false;
+
+        // 緩衝材チェック（1個で3件分）
+        if (product.name.includes('緩衝材') || product.name.includes('クッション') || product.name.includes('プチプチ')) {
+          isCushioning = true;
+          // 1個で3件分なので、必要数 = ceil(発送件数 / 3) + バッファ
+          requiredStock = Math.ceil(qty / 3) + buffer;
+        } else {
+          // 通常商品: 発送件数 + バッファ
+          requiredStock = qty + buffer;
+        }
+
         if (product.stock < requiredStock) {
           const shortage = requiredStock - product.stock;
           // 5の倍数に切り上げ（発注しやすい数値）
@@ -1145,7 +1157,9 @@
             shortage: shortage,
             orderQty: orderQty,
             shipQty: qty,
-            buffer: buffer
+            buffer: buffer,
+            isCushioning: isCushioning,
+            coverageRate: isCushioning ? 3 : 1
           });
         }
       });
@@ -1157,15 +1171,25 @@
         shortageSection.style.display = 'block';
         shortageList.innerHTML = shortages.map(s => `
           <div class="shortage-item">
-            <div class="shortage-name">${s.name}</div>
+            <div class="shortage-name">
+              ${s.name}
+              ${s.isCushioning ? '<span style="font-size: 11px; color: var(--accent); margin-left: 6px;">(1個=3件分)</span>' : ''}
+            </div>
             <div class="shortage-detail">
               <span>現在在庫:</span>
               <span>${s.currentStock}個</span>
             </div>
+            ${s.isCushioning ? `
+            <div class="shortage-detail">
+              <span>必要数:</span>
+              <span>${Math.ceil(s.shipQty / 3)}個 (${s.shipQty}件 ÷ 3)</span>
+            </div>
+            ` : `
             <div class="shortage-detail">
               <span>発送予定:</span>
-              <span>${s.shipQty}個</span>
+              <span>${s.shipQty}件</span>
             </div>
+            `}
             <div class="shortage-detail">
               <span>余剰バッファ:</span>
               <span>+${s.buffer}個</span>
