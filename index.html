@@ -983,6 +983,10 @@
         <input type="number" class="input" id="newProductThreshold" value="10" min="0">
       </div>
       <div class="input-group">
+        <label class="input-label">仕入先URL（任意）</label>
+        <input type="url" class="input" id="newProductOrderUrl" placeholder="https://example.com/product">
+      </div>
+      <div class="input-group">
         <label class="input-label">商品写真</label>
         <div class="photo-upload" id="photoUploadArea">
           <div class="photo-upload-placeholder">
@@ -1349,7 +1353,8 @@
             shipQty: qty,
             packageBuffer: packageBuffer,
             isCushioning: isCushioning,
-            coverageRate: isCushioning ? 3 : 1
+            coverageRate: isCushioning ? 3 : 1,
+            orderUrl: product.orderUrl || ''
           });
         }
       });
@@ -1401,6 +1406,11 @@
               </div>
               `}
               <div class="shortage-order" style="margin-top: 0;">💚 理想発注数: ${s.idealOrderQty}個</div>
+              ${s.orderUrl ? `
+              <button class="btn btn-success" style="margin-top: 12px; font-size: 14px; padding: 10px;" onclick="window.open('${s.orderUrl}', '_blank')">
+                🛒 仕入先ページを開く
+              </button>
+              ` : ''}
             </div>
           </div>
         `).join('');
@@ -1430,6 +1440,7 @@
       const type = document.getElementById('newProductType').value;
       const stock = parseInt(document.getElementById('newProductStock').value) || 0;
       const threshold = parseInt(document.getElementById('newProductThreshold').value) || 10;
+      const orderUrl = document.getElementById('newProductOrderUrl').value.trim();
 
       if (!name) {
         showToast('商品名を入力してください');
@@ -1446,7 +1457,8 @@
             stock,
             threshold,
             capacity: stock,
-            photo: uploadedPhotoBase64 || ''
+            photo: uploadedPhotoBase64 || '',
+            orderUrl: orderUrl || ''
           })
         });
 
@@ -1473,6 +1485,7 @@
       document.getElementById('newProductName').value = '';
       document.getElementById('newProductStock').value = '0';
       document.getElementById('newProductThreshold').value = '10';
+      document.getElementById('newProductOrderUrl').value = '';
       document.getElementById('photoUploadArea').innerHTML = `
         <div class="photo-upload-placeholder">
           📷<br>タップして写真を選択
