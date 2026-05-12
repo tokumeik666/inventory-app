@@ -1134,11 +1134,15 @@
       fixedProducts.forEach(product => {
         const requiredStock = qty + buffer;
         if (product.stock < requiredStock) {
-          const orderQty = requiredStock - product.stock;
+          const shortage = requiredStock - product.stock;
+          // 5の倍数に切り上げ（発注しやすい数値）
+          const orderQty = Math.ceil(shortage / 5) * 5;
+
           shortages.push({
             name: product.name,
             currentStock: product.stock,
             requiredStock: requiredStock,
+            shortage: shortage,
             orderQty: orderQty,
             shipQty: qty,
             buffer: buffer
@@ -1170,7 +1174,11 @@
               <span>必要在庫:</span>
               <span>${s.requiredStock}個</span>
             </div>
-            <div class="shortage-order">📦 仕入数: ${s.orderQty}個</div>
+            <div class="shortage-detail" style="color: var(--warning);">
+              <span>不足数:</span>
+              <span>${s.shortage}個</span>
+            </div>
+            <div class="shortage-order">📦 発注推奨: ${s.orderQty}個</div>
           </div>
         `).join('');
       } else {
