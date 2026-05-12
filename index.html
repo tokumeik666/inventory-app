@@ -1132,30 +1132,41 @@
       const shortages = [];
 
       fixedProducts.forEach(product => {
-        let requiredStock;
+        let requiredStockMin;  // 最低必要在庫（バッファなし）
+        let requiredStockIdeal; // 理想在庫（バッファあり）
         let isCushioning = false;
 
         // 緩衝材チェック（1個で3件分）
         if (product.name.includes('緩衝材') || product.name.includes('クッション') || product.name.includes('プチプチ')) {
           isCushioning = true;
-          // 1個で3件分なので、必要数 = ceil(発送件数 / 3) + バッファ
-          requiredStock = Math.ceil(qty / 3) + buffer;
+          // 1個で3件分
+          requiredStockMin = Math.ceil(qty / 3);
+          requiredStockIdeal = Math.ceil(qty / 3) + buffer;
         } else {
-          // 通常商品: 発送件数 + バッファ
-          requiredStock = qty + buffer;
+          // 通常商品
+          requiredStockMin = qty;
+          requiredStockIdeal = qty + buffer;
         }
 
-        if (product.stock < requiredStock) {
-          const shortage = requiredStock - product.stock;
-          // 5の倍数に切り上げ（発注しやすい数値）
-          const orderQty = Math.ceil(shortage / 5) * 5;
+        // どちらかが不足している場合に表示
+        if (product.stock < requiredStockIdeal) {
+          // 最低発注数（バッファなし）
+          const minShortage = Math.max(0, requiredStockMin - product.stock);
+          const minOrderQty = minShortage > 0 ? Math.ceil(minShortage / 5) * 5 : 0;
+
+          // 理想発注数（バッファあり）
+          const idealShortage = Math.max(0, requiredStockIdeal - product.stock);
+          const idealOrderQty = Math.ceil(idealShortage / 5) * 5;
 
           shortages.push({
             name: product.name,
             currentStock: product.stock,
-            requiredStock: requiredStock,
-            shortage: shortage,
-            orderQty: orderQty,
+            requiredStockMin: requiredStockMin,
+            requiredStockIdeal: requiredStockIdeal,
+            minShortage: minShortage,
+            idealShortage: idealShortage,
+            minOrderQty: minOrderQty,
+            idealOrderQty: idealOrderQty,
             shipQty: qty,
             buffer: buffer,
             isCushioning: isCushioning,
@@ -1194,15 +1205,20 @@
               <span>余剰バッファ:</span>
               <span>+${s.buffer}個</span>
             </div>
-            <div class="shortage-detail">
-              <span>必要在庫:</span>
-              <span>${s.requiredStock}個</span>
+            <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border);">
+              ${s.minOrderQty > 0 ? `
+              <div class="shortage-detail" style="color: var(--warning); margin-bottom: 6px;">
+                <span>⚠️ 最低発注数:</span>
+                <span style="font-weight: 700;">${s.minOrderQty}個</span>
+              </div>
+              ` : `
+              <div class="shortage-detail" style="color: var(--success); margin-bottom: 6px;">
+                <span>✅ 最低在庫は確保済</span>
+                <span></span>
+              </div>
+              `}
+              <div class="shortage-order" style="margin-top: 0;">💚 理想発注数: ${s.idealOrderQty}個</div>
             </div>
-            <div class="shortage-detail" style="color: var(--warning);">
-              <span>不足数:</span>
-              <span>${s.shortage}個</span>
-            </div>
-            <div class="shortage-order">📦 発注推奨: ${s.orderQty}個</div>
           </div>
         `).join('');
       } else {
