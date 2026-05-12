@@ -41,6 +41,7 @@
       justify-content: space-between;
       align-items: center;
       margin-bottom: 16px;
+      gap: 12px;
     }
 
     h1 {
@@ -712,12 +713,186 @@
     .nav-icon {
       font-size: 24px;
     }
+
+    .menu-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      font-size: 20px;
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .menu-btn:active {
+      opacity: 0.7;
+    }
+
+    .quick-menu {
+      position: fixed;
+      top: 0;
+      left: -100%;
+      width: 280px;
+      height: 100vh;
+      background: var(--card-bg);
+      border-right: 1px solid var(--border);
+      z-index: 2000;
+      transition: left 0.3s ease;
+      overflow-y: auto;
+      padding: 20px;
+    }
+
+    .quick-menu.active {
+      left: 0;
+    }
+
+    .menu-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 1999;
+      display: none;
+    }
+
+    .menu-overlay.active {
+      display: block;
+    }
+
+    .menu-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .menu-title {
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .menu-close {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--border);
+      border: none;
+      font-size: 18px;
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    .menu-close:active {
+      opacity: 0.7;
+    }
+
+    .menu-section {
+      margin-bottom: 24px;
+    }
+
+    .menu-section-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-dim);
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .menu-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      background: var(--bg);
+      border-radius: 12px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      transition: all 0.2s;
+    }
+
+    .menu-item:active {
+      transform: scale(0.98);
+      background: var(--border);
+    }
+
+    .menu-item-icon {
+      font-size: 20px;
+      width: 28px;
+      text-align: center;
+    }
+
+    .menu-item-text {
+      flex: 1;
+      font-weight: 600;
+    }
+
+    .menu-item-badge {
+      background: var(--accent);
+      color: white;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 700;
+    }
   </style>
 </head>
 <body>
+  <!-- クイックメニュー -->
+  <div class="menu-overlay" id="menuOverlay" onclick="closeQuickMenu()"></div>
+  <div class="quick-menu" id="quickMenu">
+    <div class="menu-header">
+      <div class="menu-title">メニュー</div>
+      <button class="menu-close" onclick="closeQuickMenu()">✕</button>
+    </div>
+
+    <div class="menu-section">
+      <div class="menu-section-title">ページ</div>
+      <div class="menu-item" onclick="navigateTo('home')">
+        <div class="menu-item-icon">🏠</div>
+        <div class="menu-item-text">ホーム</div>
+      </div>
+      <div class="menu-item" onclick="navigateTo('history')">
+        <div class="menu-item-icon">📋</div>
+        <div class="menu-item-text">履歴</div>
+      </div>
+    </div>
+
+    <div class="menu-section">
+      <div class="menu-section-title">操作</div>
+      <div class="menu-item" onclick="closeQuickMenu(); showBulkShipModal();">
+        <div class="menu-item-icon">📦</div>
+        <div class="menu-item-text">一括発送</div>
+      </div>
+      <div class="menu-item" onclick="closeQuickMenu(); showAddProductModal();">
+        <div class="menu-item-icon">➕</div>
+        <div class="menu-item-text">商品追加</div>
+      </div>
+    </div>
+
+    <div class="menu-section">
+      <div class="menu-section-title">情報</div>
+      <div class="menu-item" onclick="showAppInfo()">
+        <div class="menu-item-icon">ℹ️</div>
+        <div class="menu-item-text">アプリ情報</div>
+        <div class="menu-item-badge">v2.2</div>
+      </div>
+    </div>
+  </div>
+
   <!-- ホームページ -->
   <div class="page active" id="homePage">
     <div class="header">
+      <button class="menu-btn" onclick="openQuickMenu()">☰</button>
       <h1>📦 在庫</h1>
       <button class="bulk-ship-btn" onclick="showBulkShipModal()">📦 一括発送</button>
     </div>
@@ -741,7 +916,9 @@
   <!-- 履歴ページ -->
   <div class="page" id="historyPage">
     <div class="header">
+      <button class="menu-btn" onclick="openQuickMenu()">☰</button>
       <h1>📋 履歴</h1>
+      <div style="width: 40px;"></div>
     </div>
 
     <input type="text" class="search" id="historySearchInput" placeholder="🔍 商品名で検索">
@@ -896,7 +1073,7 @@
     let currentPage = 'home';
 
     // LocalStorageヘルパー
-    const APP_VERSION = '2.1'; // バージョンが変わったらキャッシュクリア
+    const APP_VERSION = '2.2'; // バージョンが変わったらキャッシュクリア
 
     function saveToCache(key, data) {
       try {
@@ -1643,6 +1820,27 @@
           filterHistory();
         }
       }, 30000); // 30秒に変更
+    }
+
+    // クイックメニュー
+    function openQuickMenu() {
+      document.getElementById('quickMenu').classList.add('active');
+      document.getElementById('menuOverlay').classList.add('active');
+    }
+
+    function closeQuickMenu() {
+      document.getElementById('quickMenu').classList.remove('active');
+      document.getElementById('menuOverlay').classList.remove('active');
+    }
+
+    function navigateTo(page) {
+      closeQuickMenu();
+      showPage(page);
+    }
+
+    function showAppInfo() {
+      closeQuickMenu();
+      showToast('📦 在庫管理システム v2.2\n\nGitHub Pages + GAS連携\nリアルタイム在庫管理');
     }
 
     // ページ切り替え
