@@ -1128,7 +1128,7 @@
     function checkBulkShortage() {
       const qty = parseInt(document.getElementById('bulkQtyInput').value) || 1;
       const fixedProducts = products.filter(p => p.type === 'fixed');
-      const buffer = 10; // 余剰在庫バッファ
+      const packageBuffer = 10; // 余剰在庫バッファ（個数分）
       const shortages = [];
 
       fixedProducts.forEach(product => {
@@ -1136,16 +1136,18 @@
         let requiredStockIdeal; // 理想在庫（バッファあり）
         let isCushioning = false;
 
-        // 緩衝材チェック（1個で3件分）
+        // 緩衝材チェック（1袋で3個分作成可能）
         if (product.name.includes('緩衝材') || product.name.includes('クッション') || product.name.includes('プチプチ')) {
           isCushioning = true;
-          // 1個で3件分
+          // 1袋で3個分作成可能
+          // 最低: 発送件数分の袋数
           requiredStockMin = Math.ceil(qty / 3);
-          requiredStockIdeal = Math.ceil(qty / 3) + buffer;
+          // 理想: (発送件数 + 予備10個分) の袋数
+          requiredStockIdeal = Math.ceil((qty + packageBuffer) / 3);
         } else {
           // 通常商品
           requiredStockMin = qty;
-          requiredStockIdeal = qty + buffer;
+          requiredStockIdeal = qty + packageBuffer;
         }
 
         // どちらかが不足している場合に表示
@@ -1168,7 +1170,7 @@
             minOrderQty: minOrderQty,
             idealOrderQty: idealOrderQty,
             shipQty: qty,
-            buffer: buffer,
+            packageBuffer: packageBuffer,
             isCushioning: isCushioning,
             coverageRate: isCushioning ? 3 : 1
           });
@@ -1193,18 +1195,22 @@
             ${s.isCushioning ? `
             <div class="shortage-detail">
               <span>必要数:</span>
-              <span>${Math.ceil(s.shipQty / 3)}個 (${s.shipQty}件 ÷ 3)</span>
+              <span>${Math.ceil(s.shipQty / 3)}袋 (${s.shipQty}件 ÷ 3)</span>
+            </div>
+            <div class="shortage-detail">
+              <span>余剰バッファ:</span>
+              <span>+${s.packageBuffer}個分 (${Math.ceil(s.packageBuffer / 3)}袋)</span>
             </div>
             ` : `
             <div class="shortage-detail">
               <span>発送予定:</span>
               <span>${s.shipQty}件</span>
             </div>
-            `}
             <div class="shortage-detail">
               <span>余剰バッファ:</span>
-              <span>+${s.buffer}個</span>
+              <span>+${s.packageBuffer}個</span>
             </div>
+            `}
             <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border);">
               ${s.minOrderQty > 0 ? `
               <div class="shortage-detail" style="color: var(--warning); margin-bottom: 6px;">
