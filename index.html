@@ -566,6 +566,56 @@
       border-bottom: none;
     }
 
+    .shortage-section {
+      margin-top: 20px;
+      padding: 16px;
+      background: var(--bg);
+      border-radius: 12px;
+      border: 2px solid var(--warning);
+    }
+
+    .shortage-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--warning);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .shortage-item {
+      background: var(--card-bg);
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      border: 1px solid var(--border);
+    }
+
+    .shortage-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .shortage-name {
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .shortage-detail {
+      font-size: 13px;
+      color: var(--text-dim);
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 2px;
+    }
+
+    .shortage-order {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--success);
+      margin-top: 6px;
+    }
+
     .page {
       display: none;
     }
@@ -779,9 +829,18 @@
         <div class="quantity-display" id="bulkQtyDisplay">1</div>
         <button class="quantity-btn" onclick="changeBulkQty(1)">+</button>
       </div>
-      <input type="number" class="input" id="bulkQtyInput" value="1" min="1" style="text-align: center; font-size: 20px; font-weight: 700;">
+      <input type="number" class="input" id="bulkQtyInput" value="1" min="1" style="text-align: center; font-size: 20px; font-weight: 700;" oninput="checkBulkShortage()">
       <div class="input-label" style="margin-top: 16px;">対象商品</div>
       <div class="fixed-products-list" id="fixedProductsList"></div>
+
+      <!-- 在庫不足チェック -->
+      <div id="shortageSection" style="display: none;">
+        <div class="shortage-section">
+          <div class="shortage-title">⚠️ 仕入れが必要</div>
+          <div id="shortageList"></div>
+        </div>
+      </div>
+
       <div class="btn-group">
         <button class="btn btn-danger" onclick="executeBulkShip()">一括発送を実行</button>
         <button class="btn btn-secondary" onclick="closeModal('bulkShipModal')">キャンセル</button>
@@ -1066,6 +1125,59 @@
       `).join('');
     }
 
+    function checkBulkShortage() {
+      const qty = parseInt(document.getElementById('bulkQtyInput').value) || 1;
+      const fixedProducts = products.filter(p => p.type === 'fixed');
+      const buffer = 10; // 余剰在庫バッファ
+      const shortages = [];
+
+      fixedProducts.forEach(product => {
+        const requiredStock = qty + buffer;
+        if (product.stock < requiredStock) {
+          const orderQty = requiredStock - product.stock;
+          shortages.push({
+            name: product.name,
+            currentStock: product.stock,
+            requiredStock: requiredStock,
+            orderQty: orderQty,
+            shipQty: qty,
+            buffer: buffer
+          });
+        }
+      });
+
+      const shortageSection = document.getElementById('shortageSection');
+      const shortageList = document.getElementById('shortageList');
+
+      if (shortages.length > 0) {
+        shortageSection.style.display = 'block';
+        shortageList.innerHTML = shortages.map(s => `
+          <div class="shortage-item">
+            <div class="shortage-name">${s.name}</div>
+            <div class="shortage-detail">
+              <span>現在在庫:</span>
+              <span>${s.currentStock}個</span>
+            </div>
+            <div class="shortage-detail">
+              <span>発送予定:</span>
+              <span>${s.shipQty}個</span>
+            </div>
+            <div class="shortage-detail">
+              <span>余剰バッファ:</span>
+              <span>+${s.buffer}個</span>
+            </div>
+            <div class="shortage-detail">
+              <span>必要在庫:</span>
+              <span>${s.requiredStock}個</span>
+            </div>
+            <div class="shortage-order">📦 仕入数: ${s.orderQty}個</div>
+          </div>
+        `).join('');
+      } else {
+        shortageSection.style.display = 'none';
+      }
+    }
+
     function handlePhotoUpload(event) {
       const file = event.target.files[0];
       if (!file) return;
@@ -1142,6 +1254,7 @@
       renderFixedProducts();
       document.getElementById('bulkQtyInput').value = 1;
       document.getElementById('bulkQtyDisplay').textContent = 1;
+      checkBulkShortage();
       document.getElementById('bulkShipModal').classList.add('active');
     }
 
@@ -1411,6 +1524,7 @@
       const newValue = Math.max(1, parseInt(input.value) + delta);
       input.value = newValue;
       document.getElementById('bulkQtyDisplay').textContent = newValue;
+      checkBulkShortage();
     }
 
     function changeEditQty(delta) {
