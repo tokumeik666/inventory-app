@@ -565,28 +565,168 @@
     .fixed-product-item:last-child {
       border-bottom: none;
     }
+
+    .page {
+      display: none;
+    }
+
+    .page.active {
+      display: block;
+    }
+
+    .history-list {
+      margin-top: 16px;
+    }
+
+    .history-item {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 12px;
+      border: 1px solid var(--border);
+    }
+
+    .history-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .history-date {
+      font-size: 13px;
+      color: var(--text-dim);
+    }
+
+    .history-type {
+      padding: 4px 10px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .history-type.ship {
+      background: rgba(255, 59, 48, 0.2);
+      color: var(--danger);
+    }
+
+    .history-type.restock {
+      background: rgba(52, 199, 89, 0.2);
+      color: var(--success);
+    }
+
+    .history-type.bulk {
+      background: rgba(10, 132, 255, 0.2);
+      color: var(--accent);
+    }
+
+    .history-product {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .history-qty {
+      font-size: 14px;
+      color: var(--text-dim);
+    }
+
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--card-bg);
+      border-top: 1px solid var(--border);
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      padding: 8px 0;
+      z-index: 100;
+    }
+
+    .nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: 8px;
+      color: var(--text-dim);
+      cursor: pointer;
+      font-size: 11px;
+    }
+
+    .nav-item.active {
+      color: var(--accent);
+    }
+
+    .nav-icon {
+      font-size: 24px;
+    }
   </style>
 </head>
 <body>
-  <div class="header">
-    <h1>📦 在庫</h1>
-    <button class="bulk-ship-btn" onclick="showBulkShipModal()">📦 一括発送</button>
-  </div>
-
-  <input type="text" class="search" id="searchInput" placeholder="🔍 商品を検索">
-
-  <div class="timeline" id="timeline">
-    <div class="timeline-title">
-      <span>今日の操作</span>
-      <span id="todayCount" style="color: var(--text-dim); font-size: 14px;">0件</span>
+  <!-- ホームページ -->
+  <div class="page active" id="homePage">
+    <div class="header">
+      <h1>📦 在庫</h1>
+      <button class="bulk-ship-btn" onclick="showBulkShipModal()">📦 一括発送</button>
     </div>
-    <div id="timelineContent"></div>
+
+    <input type="text" class="search" id="searchInput" placeholder="🔍 商品を検索">
+
+    <div class="timeline" id="timeline">
+      <div class="timeline-title">
+        <span>今日の操作</span>
+        <span id="todayCount" style="color: var(--text-dim); font-size: 14px;">0件</span>
+      </div>
+      <div id="timelineContent"></div>
+    </div>
+
+    <div id="productsList"></div>
+
+    <button class="fab" onclick="showAddProductModal()">➕</button>
+    <button class="undo-btn" onclick="undoLast()">↩</button>
   </div>
 
-  <div id="productsList"></div>
+  <!-- 履歴ページ -->
+  <div class="page" id="historyPage">
+    <div class="header">
+      <h1>📋 履歴</h1>
+    </div>
 
-  <button class="fab" onclick="showAddProductModal()">➕</button>
-  <button class="undo-btn" onclick="undoLast()">↩</button>
+    <input type="text" class="search" id="historySearchInput" placeholder="🔍 商品名で検索">
+
+    <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+      <select class="input" id="historyTypeFilter" onchange="filterHistory()" style="flex: 1;">
+        <option value="all">全ての操作</option>
+        <option value="ship">発送のみ</option>
+        <option value="restock">入荷のみ</option>
+        <option value="bulk">一括発送のみ</option>
+      </select>
+    </div>
+
+    <div id="historyList" class="history-list"></div>
+  </div>
+
+  <!-- ボトムナビゲーション -->
+  <div class="bottom-nav">
+    <div class="nav-item active" onclick="showPage('home')">
+      <div class="nav-icon">🏠</div>
+      <div>ホーム</div>
+    </div>
+    <div class="nav-item" onclick="showBulkShipModal()">
+      <div class="nav-icon">📦</div>
+      <div>一括発送</div>
+    </div>
+    <div class="nav-item" onclick="showAddProductModal()">
+      <div class="nav-icon">➕</div>
+      <div>商品追加</div>
+    </div>
+    <div class="nav-item" onclick="showPage('history')">
+      <div class="nav-icon">📋</div>
+      <div>履歴</div>
+    </div>
+  </div>
 
   <!-- モーダル -->
   <div class="modal" id="addProductModal">
@@ -689,10 +829,12 @@
     let products = [];
     let categories = [];
     let todayHistory = [];
+    let allHistory = [];
     let currentProductId = null;
     let currentAction = null;
     let currentLogId = null;
     let uploadedPhotoBase64 = null;
+    let currentPage = 'home';
 
     // LocalStorageヘルパー
     const APP_VERSION = '2.1'; // バージョンが変わったらキャッシュクリア
@@ -1316,13 +1458,128 @@
       searchTimeout = setTimeout(renderProducts, 300);
     });
 
+    let historySearchTimeout;
+    document.getElementById('historySearchInput').addEventListener('input', () => {
+      clearTimeout(historySearchTimeout);
+      historySearchTimeout = setTimeout(filterHistory, 300);
+    });
+
     function startAutoSync() {
       setInterval(async () => {
         await loadData();
         await loadTodayHistory();
         renderProducts();
         renderTimeline();
+        if (currentPage === 'history') {
+          await loadAllHistory();
+          filterHistory();
+        }
       }, 30000); // 30秒に変更
+    }
+
+    // ページ切り替え
+    function showPage(page) {
+      currentPage = page;
+
+      // ページの表示切り替え
+      document.getElementById('homePage').classList.remove('active');
+      document.getElementById('historyPage').classList.remove('active');
+
+      if (page === 'home') {
+        document.getElementById('homePage').classList.add('active');
+      } else if (page === 'history') {
+        document.getElementById('historyPage').classList.add('active');
+        loadAllHistory().then(() => filterHistory());
+      }
+
+      // ナビゲーションのアクティブ状態更新
+      document.querySelectorAll('.nav-item').forEach(item => {
+        item.classList.remove('active');
+      });
+
+      if (page === 'home') {
+        document.querySelectorAll('.nav-item')[0].classList.add('active');
+      } else if (page === 'history') {
+        document.querySelectorAll('.nav-item')[3].classList.add('active');
+      }
+    }
+
+    // 全履歴を取得
+    async function loadAllHistory() {
+      try {
+        const response = await fetch(`${API_URL}?action=getAllHistory`);
+        const data = await response.json();
+        allHistory = Array.isArray(data) ? data : [];
+        saveToCache('allHistory', allHistory);
+      } catch (error) {
+        console.error('全履歴取得エラー:', error);
+        // キャッシュから読み込み
+        const cached = loadFromCache('allHistory');
+        if (cached) allHistory = cached;
+      }
+    }
+
+    // 履歴をフィルタリングして表示
+    function filterHistory() {
+      const searchTerm = document.getElementById('historySearchInput').value.toLowerCase();
+      const typeFilter = document.getElementById('historyTypeFilter').value;
+
+      let filtered = allHistory;
+
+      // 商品名でフィルタ
+      if (searchTerm) {
+        filtered = filtered.filter(log =>
+          log.itemName.toLowerCase().includes(searchTerm)
+        );
+      }
+
+      // 操作タイプでフィルタ
+      if (typeFilter !== 'all') {
+        filtered = filtered.filter(log => log.type === typeFilter);
+      }
+
+      renderHistoryList(filtered);
+    }
+
+    // 履歴リストを描画
+    function renderHistoryList(historyData) {
+      const container = document.getElementById('historyList');
+
+      if (historyData.length === 0) {
+        container.innerHTML = '<div class="empty">履歴がありません</div>';
+        return;
+      }
+
+      container.innerHTML = historyData.map(log => {
+        let typeText = '';
+        let typeClass = '';
+        let actionText = '';
+
+        if (log.type === 'ship') {
+          typeText = '発送';
+          typeClass = 'ship';
+          actionText = `-${log.qty}個`;
+        } else if (log.type === 'restock') {
+          typeText = '入荷';
+          typeClass = 'restock';
+          actionText = `+${log.qty}個`;
+        } else if (log.type === 'bulk') {
+          typeText = '一括発送';
+          typeClass = 'bulk';
+          actionText = `${log.qty}件`;
+        }
+
+        return `
+          <div class="history-item">
+            <div class="history-header">
+              <span class="history-date">${log.date}</span>
+              <span class="history-type ${typeClass}">${typeText}</span>
+            </div>
+            <div class="history-product">${log.itemName}</div>
+            <div class="history-qty">${actionText}</div>
+          </div>
+        `;
+      }).join('');
     }
 
     init();
